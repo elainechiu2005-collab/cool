@@ -98,8 +98,8 @@ th{background:#eef2fb}
 .result-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
 .result-grid.single{grid-template-columns:minmax(0,200px);justify-content:center}
 .rcard{opacity:0;animation:pop .35s ease-out forwards}
-.rcard .tag{position:absolute;top:-8px;right:-6px;font-size:.7rem;font-weight:700;padding:2px 6px;border-radius:8px;background:#ff5d8f;color:#fff}
-.rcard .tag.dup{background:#c4cad6}
+.card .tag{position:absolute;top:-8px;right:-6px;font-size:.7rem;font-weight:700;padding:2px 6px;border-radius:8px;background:#ff5d8f;color:#fff}
+.card .tag.dup{background:#c4cad6}
 @keyframes pop{from{opacity:0;transform:scale(.6) translateY(10px)}to{opacity:1;transform:none}}
 
 /* 詳細資料 */
@@ -118,6 +118,24 @@ th{background:#eef2fb}
 .complete-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .complete-grid svg{width:100%}
 .trophy{display:inline-block;margin-left:6px;padding:1px 10px;border-radius:999px;background:linear-gradient(135deg,#ffcf4a,#ff9f43);color:#fff;font-size:.8rem;vertical-align:middle}
+/* v3：翻牌 */
+.flip{perspective:700px;opacity:0;animation:pop .35s ease-out forwards;cursor:pointer}
+.flip-inner{position:relative;transition:transform .55s;transform-style:preserve-3d}
+.flip.flipped .flip-inner{transform:rotateY(180deg)}
+.flip .face,.flip .card-back{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.flip .face{transform:rotateY(180deg)}
+.flip.flipped{cursor:default}
+.card-back{position:absolute;inset:0;border-radius:14px;border:3px solid var(--N);
+  background:linear-gradient(160deg,#7fb2ff,#b8a4ff);display:flex;align-items:center;justify-content:center}
+.card-back svg{width:70%;opacity:.95}
+.card-back.R{border-color:var(--R)}.card-back.SR{border-color:var(--SR);box-shadow:0 0 14px #b46ee699}
+.card-back.SSR{border-color:var(--SSR);animation:shine 1s ease-in-out infinite alternate}
+@keyframes shine{from{box-shadow:0 0 6px #f0b40066}to{box-shadow:0 0 22px #f0b400}}
+.result-btns{display:flex;gap:10px;justify-content:center}
+/* v3：星級 */
+.stars{color:#f5b400;font-size:.85rem;letter-spacing:1px}
+.stars .off{color:#d5dae4}
+.card .tag.up{background:#f0a000}
 footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
 
 @media (max-width:600px){
@@ -154,7 +172,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
         <button class="btn btn-gold" id="pull10">十連抽　🪙1000</button>
       </div>
       <p class="pity" id="pityText"></p>
-      <p class="hint" id="hintText">十連抽保證至少 1 隻 R 以上・重複角色返還 🪙20</p>
+      <p class="hint" id="hintText">十連抽保證至少 1 隻 R 以上・重複角色可升星</p>
     </div>
   </section>
 
@@ -188,7 +206,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
         <li>單抽 🪙100，十連抽 🪙1000。</li>
         <li>十連抽保證至少 1 隻 R 以上。</li>
         <li>累計 60 抽未出 SSR，第 60 抽必定出現 SSR，出現 SSR 後保底計數歸零。</li>
-        <li>抽到已擁有的角色，返還 🪙20。</li>
+        <li>抽到已擁有的角色會升星：第 1 隻為 ★1，每多 1 隻升 1 星，最高 ★5；滿星後再抽到則返還 🪙20。</li>
+        <li>十連抽結果會先蓋牌，點卡片翻開，或按「全部翻開」。卡背邊框顏色代表稀有度。</li>
         <li>初次進入贈送 🪙3000，每日簽到可領 🪙1000（每天一次）。</li>
         <li>圖鑑 12 隻全部收集完成時，一次性獎勵 🪙3000。</li>
         <li>所有進度自動存在這台裝置的瀏覽器中。</li>
@@ -199,7 +218,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
       <button class="btn btn-danger" id="resetBtn">重置存檔</button>
     </div>
   </section>
-  <footer>角色皆為原創設計・本網站僅為抽卡模擬，不涉及任何金錢交易・v2</footer>
+  <footer>角色皆為原創設計・本網站僅為抽卡模擬，不涉及任何金錢交易・v3</footer>
 </main>
 
 <div class="overlay hidden" id="overlay">
@@ -212,7 +231,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
     <h2>抽卡結果</h2>
     <p class="refund" id="refundText"></p>
     <div class="result-grid" id="resultGrid"></div>
-    <button class="btn btn-primary" id="closeResults">確定</button>
+    <div class="result-btns"><button class="btn btn-gold" id="flipAll">全部翻開</button><button class="btn btn-primary" id="closeResults">確定</button></div>
   </div>
   <button class="btn btn-small skip" id="skipBtn">略過 ▶</button>
 </div>
@@ -229,6 +248,9 @@ const COST_SINGLE = 100, COST_TEN = 1000, START_COINS = 3000, DAILY = 1000;
 const DUP_REFUND = 20, PITY_MAX = 60, HISTORY_MAX = 50, COMPLETE_REWARD = 3000;
 const SAVE_KEY = 'cloudGacha_v1';
 const ORDER = ['N', 'R', 'SR', 'SSR'];
+const MAX_STAR = 5;
+const starOf = count => Math.min(MAX_STAR, count);
+function starsHTML(n){ return `<span class="stars">${'★'.repeat(n)}<span class="off">${'★'.repeat(MAX_STAR - n)}</span></span>`; }
 const RATES = { N: 55, R: 30, SR: 12, SSR: 3 };
 
 /* ===== 角色資料（全部原創） ===== */
@@ -405,7 +427,14 @@ function doPull(n){
     const pool = CHARS.filter(c => c.r === r.rar);
     const c = pool[Math.floor(Math.random() * pool.length)];
     r.id = c.id;
-    if (state.owned[c.id]){ state.owned[c.id].count++; r.dup = true; refund += DUP_REFUND; }
+    if (state.owned[c.id]){
+      const o = state.owned[c.id];
+      const before = starOf(o.count);
+      o.count++;
+      const after = starOf(o.count);
+      if (after > before) r.up = after;              // v3：升星
+      else { r.dup = true; refund += DUP_REFUND; }    // 已滿星：返還雲朵幣
+    }
     else { state.owned[c.id] = { count: 1, first: now }; r.isNew = true; }
     state.rarityCount[r.rar]++;
     state.total++;
@@ -436,15 +465,29 @@ function showResults(){
   const { results, refund } = lastResult;
   const grid = $('resultGrid');
   grid.className = 'result-grid' + (results.length === 1 ? ' single' : '');
+  const multi = results.length > 1;
   grid.innerHTML = results.map((r, i) => {
     const c = byId[r.id];
-    const tag = r.isNew ? '<span class="tag">NEW</span>' : '<span class="tag dup">+🪙20</span>';
-    return `<div class="card rcard ${c.r}" style="animation-delay:${i*0.08}s">${tag}${charSVG(c,false)}
+    const tag = r.isNew ? '<span class="tag">NEW</span>'
+              : r.up ? `<span class="tag up">升星 ★${r.up}</span>`
+              : '<span class="tag dup">+🪙20</span>';
+    const face = `<div class="card face ${c.r}">${tag}${charSVG(c,false)}
       <div class="name">${c.name}</div><span class="badge ${c.r}">${c.r}</span></div>`;
+    if (!multi) return `<div class="card rcard ${c.r}">${tag}${charSVG(c,false)}
+      <div class="name">${c.name}</div><span class="badge ${c.r}">${c.r}</span></div>`;
+    return `<div class="flip" data-i="${i}" style="animation-delay:${i*0.06}s"><div class="flip-inner">
+      ${face}<div class="card-back ${c.r}">${capsuleSVG()}</div></div></div>`;
   }).join('');
+  $('flipAll').classList.toggle('hidden', !multi);
   $('refundText').textContent = refund ? `重複角色返還 🪙${refund}` : '';
   $('results').classList.remove('hidden');
-  if (results.some(r => r.rar === 'SSR')) fireworks();
+  if (!multi && results[0].rar === 'SSR') fireworks();
+}
+function flipCard(el){
+  if (el.classList.contains('flipped')) return;
+  el.classList.add('flipped');
+  const r = lastResult.results[+el.dataset.i];
+  if (r.rar === 'SSR') setTimeout(fireworks, 300);
 }
 
 /* ===== v2：SSR 煙火 ===== */
@@ -498,7 +541,7 @@ function renderGacha(){
   $('pityText').innerHTML = `距離 SSR 保底還有 <b>${PITY_MAX - state.pity}</b> 抽`;
   $('hintText').textContent = state.coins < COST_SINGLE
     ? '雲朵幣不足，明天簽到再來抽吧！'
-    : '十連抽保證至少 1 隻 R 以上・重複角色返還 🪙20';
+    : '十連抽保證至少 1 隻 R 以上・重複角色可升星';
 }
 function renderDex(){
   const ownedCount = CHARS.filter(c => state.owned[c.id]).length;
@@ -509,7 +552,7 @@ function renderDex(){
     const o = state.owned[c.id];
     return o
       ? `<div class="card owned ${c.r}" data-id="${c.id}">${charSVG(c,false)}<div class="name">${c.name}</div>
-         <span class="badge ${c.r}">${c.r}</span><div class="meta">擁有 ${o.count} 隻</div></div>`
+         <span class="badge ${c.r}">${c.r}</span><div>${starsHTML(starOf(o.count))}</div><div class="meta">擁有 ${o.count} 隻</div></div>`
       : `<div class="card locked ${c.r}">${charSVG(c,true)}<div class="name">？？？</div>
          <span class="badge ${c.r}">${c.r}</span><div class="meta">尚未取得</div></div>`;
   }).join('');
@@ -540,7 +583,7 @@ function renderAll(){ renderHeader(); renderGacha(); renderDex(); renderHistory(
 function openDetail(id){
   const c = byId[id], o = state.owned[id];
   $('modalCard').innerHTML = `${charSVG(c,false)}<h2>${c.name} <span class="badge ${c.r}">${c.r}</span></h2>
-    <p>${c.desc}</p><p class="meta">擁有 ${o.count} 隻・首次取得 ${new Date(o.first).toLocaleDateString('zh-TW')}</p>
+    <p>${starsHTML(starOf(o.count))}</p><p>${c.desc}</p><p class="meta">${starOf(o.count) < MAX_STAR ? `再抽到 1 隻可升到 ★${starOf(o.count)+1}` : '已達最高星級 ★5'}</p><p class="meta">擁有 ${o.count} 隻・首次取得 ${new Date(o.first).toLocaleDateString('zh-TW')}</p>
     <button class="btn btn-primary" id="closeModal" style="margin-top:10px">關閉</button>`;
   $('modal').classList.remove('hidden');
   $('closeModal').onclick = () => $('modal').classList.add('hidden');
@@ -554,6 +597,8 @@ document.querySelectorAll('nav button').forEach(b => b.addEventListener('click',
 $('pull1').onclick = () => doPull(1);
 $('pull10').onclick = () => doPull(10);
 $('skipBtn').onclick = showResults;
+$('resultGrid').addEventListener('click', e => { const f = e.target.closest('.flip'); if (f) flipCard(f); });
+$('flipAll').onclick = () => document.querySelectorAll('#resultGrid .flip').forEach((f, i) => setTimeout(() => flipCard(f), i * 90));
 $('closeResults').onclick = () => { $('overlay').classList.add('hidden'); checkComplete(); };
 $('checkinBtn').onclick = () => {
   if (state.lastCheckin === todayStr()){ toast('今天已經簽到過囉！'); return; }
