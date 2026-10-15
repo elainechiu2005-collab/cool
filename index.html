@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雲朵小怪獸扭蛋屋</title>
+<style>
+:root{
+  --bg1:#bfe3ff;--bg2:#fdf1ff;--card:#ffffffd9;--text:#2c3550;--muted:#6b7590;
+  --N:#9aa5b1;--R:#4f9de8;--SR:#b46ee6;--SSR:#f0b400;--accent:#5b8def;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--text);
+  background:linear-gradient(180deg,var(--bg1),var(--bg2));min-height:100vh}
+header{position:sticky;top:0;z-index:10;background:#ffffffe0;backdrop-filter:blur(6px);box-shadow:0 2px 10px #0000001a}
+.top{max-width:960px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;flex-wrap:wrap}
+h1{font-size:1.2rem;margin:0}
+.coins{display:flex;align-items:center;gap:8px;font-weight:700}
+.coin-badge{background:#fff7d6;border:2px solid #f3d36b;border-radius:999px;padding:4px 12px;white-space:nowrap}
+nav{max-width:960px;margin:auto;display:flex;gap:4px;padding:0 16px 8px}
+nav button{flex:1;border:none;background:transparent;padding:8px 6px;border-radius:10px;font-size:1rem;color:var(--muted);cursor:pointer}
+nav button.active{background:var(--accent);color:#fff}
+main{max-width:960px;margin:auto;padding:16px}
+section{display:none}
+section.active{display:block}
+.panel{background:var(--card);border-radius:18px;padding:20px;box-shadow:0 4px 18px #0000000f;margin-bottom:16px}
+.panel h2{margin:0 0 12px;font-size:1.1rem}
+.btn{border:none;border-radius:14px;padding:12px 20px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,opacity .2s;font-family:inherit}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-gold{background:linear-gradient(135deg,#ffcf4a,#ff9f43);color:#fff}
+.btn-light{background:#eef2fb;color:var(--text)}
+.btn-danger{background:#ff6b6b;color:#fff}
+.btn-small{padding:6px 14px;font-size:.9rem;border-radius:10px}
+
+/* 抽卡頁 */
+.machine{text-align:center}
+.machine svg{width:200px;max-width:60vw;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.pull-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0 8px}
+.pull-row .btn{min-width:150px}
+.pity{color:var(--muted);margin:6px 0 0}
+.pity b{color:var(--SSR)}
+.hint{color:var(--muted);font-size:.9rem;margin-top:8px}
+
+/* 稀有度標籤 */
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;color:#fff;font-size:.75rem;font-weight:700}
+.badge.N{background:var(--N)}.badge.R{background:var(--R)}.badge.SR{background:var(--SR)}.badge.SSR{background:var(--SSR)}
+
+/* 圖鑑 */
+.progress{height:14px;background:#e6ebf5;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.progress div{height:100%;background:linear-gradient(90deg,#6fb7ff,#b48cff);transition:width .4s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:14px}
+.card{background:#fff;border-radius:14px;padding:10px 8px;text-align:center;border:3px solid var(--N);position:relative}
+.card.R{border-color:var(--R)}.card.SR{border-color:var(--SR)}.card.SSR{border-color:var(--SSR);box-shadow:0 0 12px #f0b40066}
+.card svg{width:100%;max-width:110px;display:block;margin:auto}
+.card .name{font-weight:700;margin:4px 0 2px}
+.card .meta{font-size:.8rem;color:var(--muted)}
+.card.owned{cursor:pointer}
+.card.owned:hover{transform:translateY(-2px)}
+.card.locked .name{color:#9aa0ad}
+
+/* 紀錄 */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.stat{background:#fff;border-radius:12px;padding:10px;text-align:center}
+.stat .num{font-size:1.3rem;font-weight:700}
+.stat .lbl{font-size:.8rem;color:var(--muted)}
+.hist{list-style:none;padding:0;margin:0;max-height:420px;overflow:auto}
+.hist li{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px dashed #dde3ef}
+.hist li .time{color:var(--muted);font-size:.8rem;margin-left:auto}
+.empty{color:var(--muted);text-align:center;padding:20px}
+
+/* 機率表 */
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef1f7;font-size:.95rem}
+th{background:#eef2fb}
+.rules li{margin:6px 0}
+
+/* 覆蓋層 */
+.overlay{position:fixed;inset:0;background:#1d2440d9;z-index:50;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:16px}
+.hidden{display:none !important}
+.anim{position:relative;width:240px;height:240px;display:flex;align-items:center;justify-content:center}
+.anim .glow{position:absolute;inset:0;border-radius:50%;animation:pulse .8s ease-in-out infinite alternate}
+.anim svg{width:180px;position:relative;animation:shake .45s ease-in-out infinite}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+@keyframes pulse{from{transform:scale(.8);opacity:.5}to{transform:scale(1.15);opacity:1}}
+.glow-N .glow{background:radial-gradient(circle,#ffffffaa,transparent 65%)}
+.glow-R .glow{background:radial-gradient(circle,#4f9de8cc,transparent 65%)}
+.glow-SR .glow{background:radial-gradient(circle,#b46ee6dd,transparent 65%)}
+.glow-SSR .glow{background:conic-gradient(#ffd23f,#ff7b7b,#b48cff,#6fb7ff,#7fd88a,#ffd23f);filter:blur(18px);animation:pulse .5s ease-in-out infinite alternate,spin 2s linear infinite}
+@keyframes spin{to{rotate:360deg}}
+.anim-text{color:#fff;margin-top:10px;font-weight:700;letter-spacing:2px}
+.skip{position:fixed;right:16px;bottom:16px;background:#ffffff33;color:#fff;border:1px solid #ffffff66}
+.results{background:#fff;border-radius:20px;padding:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto;text-align:center}
+.results h2{margin:0 0 4px}
+.refund{color:var(--muted);font-size:.9rem;margin:0 0 10px}
+.result-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.result-grid.single{grid-template-columns:minmax(0,200px);justify-content:center}
+.rcard{opacity:0;animation:pop .35s ease-out forwards}
+.rcard .tag{position:absolute;top:-8px;right:-6px;font-size:.7rem;font-weight:700;padding:2px 6px;border-radius:8px;background:#ff5d8f;color:#fff}
+.rcard .tag.dup{background:#c4cad6}
+@keyframes pop{from{opacity:0;transform:scale(.6) translateY(10px)}to{opacity:1;transform:none}}
+
+/* 詳細資料 */
+.modal-card{background:#fff;border-radius:20px;padding:20px;max-width:360px;width:100%;text-align:center}
+.modal-card svg{width:180px}
+.modal-card p{margin:6px 0}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2c3550;color:#fff;padding:10px 18px;border-radius:12px;z-index:80;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+/* v2：SSR 煙火 */
+.fw{position:fixed;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:70;
+  animation:fw 1.2s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes fw{0%{transform:translate(0,0) scale(1.2);opacity:1}70%{opacity:1}
+  100%{transform:translate(var(--dx),calc(var(--dy) + 40px)) scale(.3);opacity:0}}
+/* v2：全收集 */
+.complete-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.complete-grid svg{width:100%}
+.trophy{display:inline-block;margin-left:6px;padding:1px 10px;border-radius:999px;background:linear-gradient(135deg,#ffcf4a,#ff9f43);color:#fff;font-size:.8rem;vertical-align:middle}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:10px 0 24px}
+
+@media (max-width:600px){
+  .result-grid{grid-template-columns:repeat(3,1fr)}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .pull-row .btn{min-width:130px;flex:1}
+  h1{font-size:1.05rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>☁️ 雲朵小怪獸扭蛋屋</h1>
+    <div class="coins">
+      <span class="coin-badge">🪙 <span id="coinText">0</span></span>
+      <button class="btn btn-gold btn-small" id="checkinBtn">每日簽到</button>
+    </div>
+  </div>
+  <nav>
+    <button data-tab="gacha" class="active">抽卡</button>
+    <button data-tab="dex">圖鑑</button>
+    <button data-tab="history">紀錄</button>
+    <button data-tab="rates">機率</button>
+  </nav>
+</header>
+
+<main>
+  <section id="gacha" class="active">
+    <div class="panel machine">
+      <div id="machineArt"></div>
+      <div class="pull-row">
+        <button class="btn btn-primary" id="pull1">單抽　🪙100</button>
+        <button class="btn btn-gold" id="pull10">十連抽　🪙1000</button>
+      </div>
+      <p class="pity" id="pityText"></p>
+      <p class="hint" id="hintText">十連抽保證至少 1 隻 R 以上・重複角色返還 🪙20</p>
+    </div>
+  </section>
+
+  <section id="dex">
+    <div class="panel">
+      <h2>圖鑑 <span id="dexCount"></span></h2>
+      <div class="progress"><div id="dexBar"></div></div>
+      <div class="grid" id="dexGrid"></div>
+    </div>
+  </section>
+
+  <section id="history">
+    <div class="panel">
+      <h2>統計</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="panel">
+      <h2>最近 50 次抽卡</h2>
+      <ul class="hist" id="histList"></ul>
+    </div>
+  </section>
+
+  <section id="rates">
+    <div class="panel">
+      <h2>機率公開</h2>
+      <table id="rateTable"></table>
+    </div>
+    <div class="panel">
+      <h2>規則說明</h2>
+      <ul class="rules">
+        <li>單抽 🪙100，十連抽 🪙1000。</li>
+        <li>十連抽保證至少 1 隻 R 以上。</li>
+        <li>累計 60 抽未出 SSR，第 60 抽必定出現 SSR，出現 SSR 後保底計數歸零。</li>
+        <li>抽到已擁有的角色，返還 🪙20。</li>
+        <li>初次進入贈送 🪙3000，每日簽到可領 🪙1000（每天一次）。</li>
+        <li>圖鑑 12 隻全部收集完成時，一次性獎勵 🪙3000。</li>
+        <li>所有進度自動存在這台裝置的瀏覽器中。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>設定</h2>
+      <button class="btn btn-danger" id="resetBtn">重置存檔</button>
+    </div>
+  </section>
+  <footer>角色皆為原創設計・本網站僅為抽卡模擬，不涉及任何金錢交易・v2</footer>
+</main>
+
+<div class="overlay hidden" id="overlay">
+  <div class="anim" id="anim">
+    <div class="glow"></div>
+    <div id="capsuleArt"></div>
+  </div>
+  <div class="anim-text" id="animText">雲朵正在凝聚…</div>
+  <div class="results hidden" id="results">
+    <h2>抽卡結果</h2>
+    <p class="refund" id="refundText"></p>
+    <div class="result-grid" id="resultGrid"></div>
+    <button class="btn btn-primary" id="closeResults">確定</button>
+  </div>
+  <button class="btn btn-small skip" id="skipBtn">略過 ▶</button>
+</div>
+
+<div class="overlay hidden" id="modal">
+  <div class="modal-card" id="modalCard"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 基本設定 ===== */
+const COST_SINGLE = 100, COST_TEN = 1000, START_COINS = 3000, DAILY = 1000;
+const DUP_REFUND = 20, PITY_MAX = 60, HISTORY_MAX = 50, COMPLETE_REWARD = 3000;
+const SAVE_KEY = 'cloudGacha_v1';
+const ORDER = ['N', 'R', 'SR', 'SSR'];
+const RATES = { N: 55, R: 30, SR: 12, SSR: 3 };
+
+/* ===== 角色資料（全部原創） ===== */
+const CHARS = [
+  { id:'cloud',   name:'白雲糰', r:'N',   color:'#ffffff', acc:'none',    desc:'最普通也最軟綿綿的雲，喜歡在天空發呆。' },
+  { id:'drizzle', name:'毛毛雨', r:'N',   color:'#d3e6f7', acc:'drizzle', desc:'一緊張就會滴下小雨點。' },
+  { id:'fog',     name:'小霧',   r:'N',   color:'#e2e6eb', acc:'fog',     desc:'早上才出現，中午前就害羞地散掉。' },
+  { id:'breeze',  name:'微風',   r:'N',   color:'#e3f7ef', acc:'wind',    desc:'跑得很快，最喜歡吹動晾著的衣服。' },
+  { id:'sunny',   name:'晴晴',   r:'N',   color:'#fff3c4', acc:'sun',     desc:'頭上頂著小太陽，永遠很有精神。' },
+  { id:'thunder', name:'雷咚咚', r:'R',   color:'#c3bde0', acc:'bolt',    desc:'打嗝時會發出咚咚的雷聲。' },
+  { id:'snow',    name:'雪花糖', r:'R',   color:'#eef6ff', acc:'snow',    desc:'身上的雪花吃起來有一點甜。' },
+  { id:'hail',    name:'冰雹仔', r:'R',   color:'#d6e8f0', acc:'hail',    desc:'個子小小，脾氣硬硬。' },
+  { id:'dew',     name:'晨露',   r:'R',   color:'#e4f5e1', acc:'dew',     desc:'總是在清晨的葉子上睡覺。' },
+  { id:'rainbow', name:'彩虹橋', r:'SR',  color:'#fde7f0', acc:'rainbow', desc:'雨停之後才現身，背著七色的橋。' },
+  { id:'meteor',  name:'流星雨', r:'SR',  color:'#34406e', acc:'meteor',  dark:true, desc:'在夜空巡邏，幫大家收集願望。' },
+  { id:'aurora',  name:'極光',   r:'SSR', color:'#1f2d52', acc:'aurora',  dark:true, desc:'極北之地的傳說，很少有人見過牠。' }
+];
+const byId = Object.fromEntries(CHARS.map(c => [c.id, c]));
+
+/* ===== SVG 繪製 ===== */
+function star(x, y, r, fill){
+  let pts = [];
+  for (let i = 0; i < 10; i++){
+    const rad = i % 2 ? r * 0.45 : r;
+    const a = Math.PI / 5 * i - Math.PI / 2;
+    pts.push((x + rad * Math.cos(a)).toFixed(1) + ',' + (y + rad * Math.sin(a)).toFixed(1));
+  }
+  return `<polygon points="${pts.join(' ')}" fill="${fill}"/>`;
+}
+function flake(x, y, r, col){
+  let s = '';
+  for (let i = 0; i < 3; i++){
+    const a = Math.PI / 3 * i;
+    s += `<line x1="${x - r*Math.cos(a)}" y1="${y - r*Math.sin(a)}" x2="${x + r*Math.cos(a)}" y2="${y + r*Math.sin(a)}" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  return s;
+}
+function accBack(acc, col){
+  if (acc === 'rainbow'){
+    const cs = ['#ff7b7b','#ffc65c','#7fd88a','#6fb7ff','#b48cff'];
+    return cs.map((c, i) => { const r = 54 - i*6;
+      return `<path d="M${60-r} 66 A${r} ${r} 0 0 1 ${60+r} 66" stroke="${col(c)}" stroke-width="6" fill="none"/>`; }).join('');
+  }
+  if (acc === 'aurora'){
+    return `<path d="M2 40 Q30 6 60 28 T118 20" stroke="${col('#6ff2c2')}" stroke-width="9" fill="none" opacity=".85" stroke-linecap="round"/>
+            <path d="M6 30 Q34 0 62 18 T116 8" stroke="${col('#a78bfa')}" stroke-width="7" fill="none" opacity=".8" stroke-linecap="round"/>
+            <path d="M10 48 Q36 22 64 38 T114 34" stroke="${col('#5ee1ff')}" stroke-width="5" fill="none" opacity=".7" stroke-linecap="round"/>`;
+  }
+  return '';
+}
+function accFront(acc, col){
+  switch (acc){
+    case 'drizzle':
+      return [40,58,76,50,68].map((x,i) => `<ellipse cx="${x}" cy="${i<3?106:114}" rx="2.6" ry="4.4" fill="${col('#6aa9e0')}"/>`).join('');
+    case 'fog':
+      return `<path d="M14 100 Q28 94 42 100 T70 100 T98 100" stroke="${col('#b9c2cc')}" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M24 110 Q38 104 52 110 T80 110 T108 110" stroke="${col('#cfd6de')}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    case 'wind':
+      return `<path d="M2 56 H20 Q28 56 26 49" stroke="${col('#6cc7a1')}" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <path d="M0 68 H16" stroke="${col('#6cc7a1')}" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <path d="M4 80 H18 Q26 80 24 87" stroke="${col('#6cc7a1')}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    case 'sun': {
+      let rays = '';
+      for (let i = 0; i < 8; i++){ const a = Math.PI/4*i;
+        rays += `<line x1="${92+15*Math.cos(a)}" y1="${24+15*Math.sin(a)}" x2="${92+21*Math.cos(a)}" y2="${24+21*Math.sin(a)}" stroke="${col('#ffb627')}" stroke-width="3" stroke-linecap="round"/>`; }
+      return rays + `<circle cx="92" cy="24" r="11" fill="${col('#ffcc33')}"/>`;
+    }
+    case 'bolt':
+      return `<polygon points="57,96 68,96 62,104 71,104 54,119 59,108 51,108" fill="${col('#ffd23f')}" stroke="${col('#e0a800')}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    case 'snow':
+      return flake(22, 36, 7, col('#7fb6e8')) + flake(98, 34, 6, col('#7fb6e8')) + flake(60, 22, 5, col('#a9cdef'));
+    case 'hail':
+      return `<circle cx="44" cy="108" r="4" fill="${col('#eef8ff')}" stroke="${col('#8fb8cc')}" stroke-width="1.5"/>
+              <circle cx="60" cy="113" r="5" fill="${col('#eef8ff')}" stroke="${col('#8fb8cc')}" stroke-width="1.5"/>
+              <circle cx="76" cy="107" r="4" fill="${col('#eef8ff')}" stroke="${col('#8fb8cc')}" stroke-width="1.5"/>`;
+    case 'dew':
+      return `<path d="M60 14 C60 14 50 28 50 34 A10 10 0 0 0 70 34 C70 28 60 14 60 14 Z" fill="${col('#8fe0d0')}" stroke="${col('#5fbfae')}" stroke-width="1.5"/>
+              <ellipse cx="56" cy="32" rx="2" ry="3.5" fill="${col('#ffffff')}" opacity=".8"/>`;
+    case 'meteor':
+      return `<line x1="86" y1="20" x2="110" y2="6" stroke="${col('#ffe9a8')}" stroke-width="3" stroke-linecap="round"/>
+              <line x1="18" y1="30" x2="36" y2="18" stroke="${col('#ffe9a8')}" stroke-width="2.5" stroke-linecap="round"/>`
+             + star(86, 20, 7, col('#ffd23f')) + star(18, 30, 5, col('#ffd23f')) + star(104, 44, 3.5, col('#fff3c4'));
+    case 'aurora':
+      return star(16, 66, 4, col('#fff3c4')) + star(106, 60, 5, col('#fff3c4')) + star(60, 26, 6, col('#ffe27a'));
+    default: return '';
+  }
+}
+function charSVG(c, sil){
+  const S = '#2b3042';
+  const col = x => sil ? S : x;
+  const body = sil ? S : c.color;
+  const outline = sil ? S : (c.dark ? '#0e1530' : '#9fb3c8');
+  const circles = [[38,72,22],[60,58,28],[84,70,22],[60,80,25]];
+  const outer = circles.map(([x,y,r]) => `<circle cx="${x}" cy="${y}" r="${r+2.5}" fill="${outline}"/>`).join('');
+  const inner = circles.map(([x,y,r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${body}"/>`).join('');
+  let face = '';
+  if (!sil){
+    const eye = c.dark ? '#ffffff' : '#3a3f55';
+    const shine = c.dark ? '#1f2d52' : '#ffffff';
+    face = `<circle cx="50" cy="72" r="3.8" fill="${eye}"/><circle cx="70" cy="72" r="3.8" fill="${eye}"/>
+            <circle cx="51.3" cy="70.6" r="1.2" fill="${shine}"/><circle cx="71.3" cy="70.6" r="1.2" fill="${shine}"/>
+            <ellipse cx="42" cy="79" rx="5" ry="3" fill="#ff9fb3" opacity=".6"/><ellipse cx="78" cy="79" rx="5" ry="3" fill="#ff9fb3" opacity=".6"/>
+            <path d="M56 78 Q60 82 64 78" stroke="${eye}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  }
+  return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="${sil ? '未取得角色' : c.name}">
+    ${accBack(c.acc, col)}${outer}${inner}${face}${accFront(c.acc, col)}</svg>`;
+}
+function capsuleSVG(){
+  const c = { color:'#ffffff', acc:'none' };
+  return charSVG(c, false).replace('</svg>',
+    `<text x="60" y="64" text-anchor="middle" font-size="22" font-weight="700" fill="#5b8def">?</text></svg>`)
+    .replace(/<circle cx="5[01]\.?3?"[^>]*>|<circle cx="7[01]\.?3?"[^>]*>|<ellipse cx="42"[^>]*>|<ellipse cx="78"[^>]*>|<path d="M56 78[^>]*>/g, '');
+}
+
+/* ===== 存檔 ===== */
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function defaultState(){
+  return { coins: START_COINS, owned: {}, pity: 0, history: [], lastCheckin: null, total: 0,
+           rarityCount: { N:0, R:0, SR:0, SSR:0 }, completeRewarded: false };
+}
+function load(){
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s && typeof s.coins === 'number') return Object.assign(defaultState(), s);
+  } catch (e) {}
+  return defaultState();
+}
+function save(){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+let state = load();
+
+/* ===== 小工具 ===== */
+const $ = id => document.getElementById(id);
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+/* ===== 抽卡邏輯 ===== */
+function rollRarity(){
+  const x = Math.random() * 100;
+  if (x < RATES.SSR) return 'SSR';
+  if (x < RATES.SSR + RATES.SR) return 'SR';
+  if (x < RATES.SSR + RATES.SR + RATES.R) return 'R';
+  return 'N';
+}
+function doPull(n){
+  const cost = n === 10 ? COST_TEN : COST_SINGLE;
+  if (state.coins < cost){ toast('雲朵幣不足，記得每天來簽到喔！'); return; }
+  state.coins -= cost;
+
+  const results = [];
+  for (let i = 0; i < n; i++){
+    state.pity++;
+    const rar = state.pity >= PITY_MAX ? 'SSR' : rollRarity();
+    if (rar === 'SSR') state.pity = 0;
+    results.push({ rar });
+  }
+  // 十連保底：全部都是 N 時，最後一抽改為 R
+  if (n === 10 && results.every(r => r.rar === 'N')) results[9].rar = 'R';
+
+  const now = Date.now();
+  let refund = 0;
+  results.forEach(r => {
+    const pool = CHARS.filter(c => c.r === r.rar);
+    const c = pool[Math.floor(Math.random() * pool.length)];
+    r.id = c.id;
+    if (state.owned[c.id]){ state.owned[c.id].count++; r.dup = true; refund += DUP_REFUND; }
+    else { state.owned[c.id] = { count: 1, first: now }; r.isNew = true; }
+    state.rarityCount[r.rar]++;
+    state.total++;
+    state.history.unshift({ t: now, id: c.id });
+  });
+  state.history = state.history.slice(0, HISTORY_MAX);
+  state.coins += refund;
+  save();
+  renderAll();
+  playAnimation(results, refund);
+}
+
+/* ===== 抽卡動畫 ===== */
+let animTimer = null, lastResult = null;
+function playAnimation(results, refund){
+  lastResult = { results, refund };
+  const best = results.reduce((b, r) => ORDER.indexOf(r.rar) > ORDER.indexOf(b) ? r.rar : b, 'N');
+  $('anim').className = 'anim glow-' + best;
+  $('animText').textContent = best === 'SSR' ? '✨ 天空出現了奇異的光芒…' : '雲朵正在凝聚…';
+  $('overlay').classList.remove('hidden');
+  ['anim','animText','skipBtn'].forEach(id => $(id).classList.remove('hidden'));
+  $('results').classList.add('hidden');
+  animTimer = setTimeout(showResults, best === 'SSR' ? 2400 : 1600);
+}
+function showResults(){
+  clearTimeout(animTimer);
+  ['anim','animText','skipBtn'].forEach(id => $(id).classList.add('hidden'));
+  const { results, refund } = lastResult;
+  const grid = $('resultGrid');
+  grid.className = 'result-grid' + (results.length === 1 ? ' single' : '');
+  grid.innerHTML = results.map((r, i) => {
+    const c = byId[r.id];
+    const tag = r.isNew ? '<span class="tag">NEW</span>' : '<span class="tag dup">+🪙20</span>';
+    return `<div class="card rcard ${c.r}" style="animation-delay:${i*0.08}s">${tag}${charSVG(c,false)}
+      <div class="name">${c.name}</div><span class="badge ${c.r}">${c.r}</span></div>`;
+  }).join('');
+  $('refundText').textContent = refund ? `重複角色返還 🪙${refund}` : '';
+  $('results').classList.remove('hidden');
+  if (results.some(r => r.rar === 'SSR')) fireworks();
+}
+
+/* ===== v2：SSR 煙火 ===== */
+function fireworks(){
+  const colors = ['#ffd23f','#ff7b7b','#b48cff','#6fb7ff','#7fd88a','#ffffff'];
+  for (let b = 0; b < 4; b++){
+    setTimeout(() => {
+      const cx = 20 + Math.random() * 60, cy = 15 + Math.random() * 35;
+      for (let i = 0; i < 36; i++){
+        const p = document.createElement('span');
+        const a = Math.PI * 2 * i / 36, d = 70 + Math.random() * 70;
+        p.className = 'fw';
+        p.style.left = cx + 'vw'; p.style.top = cy + 'vh';
+        p.style.background = colors[(b + i) % colors.length];
+        p.style.setProperty('--dx', (Math.cos(a) * d).toFixed(0) + 'px');
+        p.style.setProperty('--dy', (Math.sin(a) * d).toFixed(0) + 'px');
+        p.addEventListener('animationend', () => p.remove());
+        document.body.appendChild(p);
+      }
+    }, b * 380);
+  }
+}
+
+/* ===== v2：圖鑑全收集獎勵 ===== */
+function isComplete(){ return CHARS.every(c => state.owned[c.id]); }
+function checkComplete(){
+  if (state.completeRewarded || !isComplete()) return;
+  state.completeRewarded = true;
+  state.coins += COMPLETE_REWARD;
+  save(); renderAll();
+  $('modalCard').innerHTML = `<h2>🎉 圖鑑全收集！</h2>
+    <p>你收集到了全部 12 隻雲朵小怪獸！</p>
+    <div class="complete-grid">${CHARS.map(c => charSVG(c,false)).join('')}</div>
+    <p><b>獎勵 🪙${COMPLETE_REWARD.toLocaleString()}</b> 已加入你的雲朵幣</p>
+    <button class="btn btn-gold" id="closeModal" style="margin-top:10px">太棒了！</button>`;
+  $('modal').classList.remove('hidden');
+  $('closeModal').onclick = () => $('modal').classList.add('hidden');
+  fireworks();
+}
+
+/* ===== 畫面渲染 ===== */
+function renderHeader(){
+  $('coinText').textContent = state.coins.toLocaleString();
+  const done = state.lastCheckin === todayStr();
+  $('checkinBtn').textContent = done ? '今日已簽到' : '每日簽到 +1000';
+  $('checkinBtn').disabled = done;
+}
+function renderGacha(){
+  $('pull1').disabled = state.coins < COST_SINGLE;
+  $('pull10').disabled = state.coins < COST_TEN;
+  $('pityText').innerHTML = `距離 SSR 保底還有 <b>${PITY_MAX - state.pity}</b> 抽`;
+  $('hintText').textContent = state.coins < COST_SINGLE
+    ? '雲朵幣不足，明天簽到再來抽吧！'
+    : '十連抽保證至少 1 隻 R 以上・重複角色返還 🪙20';
+}
+function renderDex(){
+  const ownedCount = CHARS.filter(c => state.owned[c.id]).length;
+  $('dexCount').innerHTML = `${ownedCount} / ${CHARS.length}` + (isComplete() ? '<span class="trophy">🏆 全收集</span>' : '');
+  $('dexBar').style.width = (ownedCount / CHARS.length * 100) + '%';
+  const sorted = [...CHARS].sort((a, b) => ORDER.indexOf(b.r) - ORDER.indexOf(a.r));
+  $('dexGrid').innerHTML = sorted.map(c => {
+    const o = state.owned[c.id];
+    return o
+      ? `<div class="card owned ${c.r}" data-id="${c.id}">${charSVG(c,false)}<div class="name">${c.name}</div>
+         <span class="badge ${c.r}">${c.r}</span><div class="meta">擁有 ${o.count} 隻</div></div>`
+      : `<div class="card locked ${c.r}">${charSVG(c,true)}<div class="name">？？？</div>
+         <span class="badge ${c.r}">${c.r}</span><div class="meta">尚未取得</div></div>`;
+  }).join('');
+}
+function renderHistory(){
+  const t = state.total;
+  const pct = r => t ? (state.rarityCount[r] / t * 100).toFixed(1) + '%' : '-';
+  $('stats').innerHTML =
+    `<div class="stat"><div class="num">${t}</div><div class="lbl">總抽數</div></div>` +
+    ORDER.slice().reverse().map(r => `<div class="stat"><div class="num">${state.rarityCount[r]}</div>
+      <div class="lbl"><span class="badge ${r}">${r}</span> 實際 ${pct(r)}</div></div>`).join('');
+  $('histList').innerHTML = state.history.length
+    ? state.history.map(h => { const c = byId[h.id];
+        return `<li><span class="badge ${c.r}">${c.r}</span>${c.name}<span class="time">${fmtTime(h.t)}</span></li>`; }).join('')
+    : '<li class="empty">還沒有抽卡紀錄，去抽一發吧！</li>';
+}
+function renderRates(){
+  $('rateTable').innerHTML = '<tr><th>稀有度</th><th>總機率</th><th>單隻機率</th><th>角色</th></tr>' +
+    ORDER.slice().reverse().map(r => {
+      const list = CHARS.filter(c => c.r === r);
+      return `<tr><td><span class="badge ${r}">${r}</span></td><td>${RATES[r]}%</td>
+        <td>${(RATES[r] / list.length).toFixed(2)}%</td><td>${list.map(c => c.name).join('、')}</td></tr>`;
+    }).join('');
+}
+function renderAll(){ renderHeader(); renderGacha(); renderDex(); renderHistory(); }
+
+/* ===== 角色詳細資料 ===== */
+function openDetail(id){
+  const c = byId[id], o = state.owned[id];
+  $('modalCard').innerHTML = `${charSVG(c,false)}<h2>${c.name} <span class="badge ${c.r}">${c.r}</span></h2>
+    <p>${c.desc}</p><p class="meta">擁有 ${o.count} 隻・首次取得 ${new Date(o.first).toLocaleDateString('zh-TW')}</p>
+    <button class="btn btn-primary" id="closeModal" style="margin-top:10px">關閉</button>`;
+  $('modal').classList.remove('hidden');
+  $('closeModal').onclick = () => $('modal').classList.add('hidden');
+}
+
+/* ===== 事件 ===== */
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('active', s.id === b.dataset.tab));
+}));
+$('pull1').onclick = () => doPull(1);
+$('pull10').onclick = () => doPull(10);
+$('skipBtn').onclick = showResults;
+$('closeResults').onclick = () => { $('overlay').classList.add('hidden'); checkComplete(); };
+$('checkinBtn').onclick = () => {
+  if (state.lastCheckin === todayStr()){ toast('今天已經簽到過囉！'); return; }
+  state.coins += DAILY; state.lastCheckin = todayStr(); save(); renderAll();
+  toast('簽到成功！獲得 🪙1000');
+};
+$('dexGrid').addEventListener('click', e => {
+  const card = e.target.closest('.card.owned');
+  if (card) openDetail(card.dataset.id);
+});
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.add('hidden'); });
+$('resetBtn').onclick = () => {
+  if (!confirm('確定要重置存檔嗎？所有角色、雲朵幣與紀錄都會清除。')) return;
+  state = defaultState(); save(); renderAll(); toast('存檔已重置');
+};
+
+/* ===== 初始化 ===== */
+$('machineArt').innerHTML = capsuleSVG();
+$('capsuleArt').innerHTML = capsuleSVG();
+renderRates();
+renderAll();
+save();
+</script>
+</body>
+</html>
